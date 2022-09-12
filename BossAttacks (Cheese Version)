@@ -1,0 +1,122 @@
+local module = {}
+local AttackedPlayersArray = {}
+local PlayerIndexCount = 1
+local PathFindingService = game:GetService("PathfindingService")
+local TweenService = game:GetService("TweenService")
+local AnimationsFolder = script:WaitForChild("Animations")
+local SoundsFolder = script:WaitForChild("Sounds")
+local ServerStorage = game:GetService("ServerStorage")
+
+module.TakeDamage = function(Damage, Range, DamagePart)
+	for _, Player in pairs(game:GetService("Players"):GetChildren()) do
+		if (DamagePart.Position - Player.Character:FindFirstChild("HumanoidRootPart").Position).magnitude <= Range then
+			Player.Character:FindFirstChild("Humanoid"):TakeDamage(Damage)
+		end
+	end
+end
+
+module.WalkTo = function(StartPos, EndPos, Humanoid, WalkSpeed)
+	local OriginalSpeed = Humanoid.WalkSpeed
+	if WalkSpeed then
+		Humanoid.WalkSpeed = WalkSpeed
+	end
+	local Path = PathFindingService:CreatePath()
+	Path:ComputeAsync(StartPos, EndPos)
+	for _, Waypoint in pairs(Path:GetWaypoints()) do
+		Humanoid:MoveTo(Waypoint.Position)
+		Humanoid.MoveToFinished:Wait()
+	end
+	Humanoid.WalkSpeed = OriginalSpeed
+end
+
+module.RockDebris = function(MainPos, Count)
+	local RockDebrisFolder = Instance.new("Folder")
+	RockDebrisFolder.Name = "RockDebrisFolder"
+	RockDebrisFolder.Parent = workspace 
+	for Rock = 1, Count do
+		local RockObject = game:GetService("ServerStorage").RockDebris:Clone()
+		RockObject.Parent = RockDebrisFolder
+		RockObject.Position = MainPos + Vector3.new(math.random(-5, 5), math.random(0, 5), math.random(-5, 5))
+		RockObject.Orientation = Vector3.new(math.random(-5, 5), math.random(-5, 5), math.random(-5, 5))
+		game.Debris:AddItem(RockObject, math.random(5,10))
+	end
+end
+
+module.Dash = function(Player, BossHumanoidRootPart, BossHumanoid)
+	local PlayerFound = table.find(AttackedPlayersArray, Player.Name)
+	if not PlayerFound then
+		table.insert(AttackedPlayersArray, PlayerIndexCount, Player.Name)
+		PlayerIndexCount += 1
+	end
+	local Pellets = game:GetService("ServerStorage").Pellets:Clone()
+	Pellets.Parent = workspace
+	local Attachment0 = game:GetService("ServerStorage").Attachment0:Clone()
+	Attachment0.Parent = workspace
+	local Attachment1 = game:GetService("ServerStorage").Attachment1:Clone()
+	local PlayerPos = Player:FindFirstChild("HumanoidRootPart").Position
+	local PlayerCFrame = Player:FindFirstChild("HumanoidRootPart").CFrame
+	local DashAnim = BossHumanoid:LoadAnimation(AnimationsFolder.Dash)
+	Attachment1.Parent = workspace
+	Pellets.Attachment0 = Attachment0.Attachment0
+	Pellets.Attachment1 = Attachment1.Attachment1
+	Attachment0.Position = BossHumanoidRootPart.Position
+	Attachment1.Position = PlayerPos - Vector3.new(0, 2, 0)
+	Pellets.FaceCamera = true
+	Attachment0.Orientation = Vector3.new(0, 0, 90) + BossHumanoidRootPart.Position
+	Attachment1.Orientation = Vector3.new(0, 0, 90)
+	game.Debris:AddItem(Attachment0, 0.5)
+	game.Debris:AddItem(Attachment1, 0.5)
+	game.Debris:AddItem(Pellets, 0.5)
+	task.wait(0.5)
+	TweenService:Create(BossHumanoidRootPart, TweenInfo.new((PlayerPos + Vector3.new(0, 3, 0) - BossHumanoidRootPart.Position).Magnitude / 100), {CFrame = PlayerCFrame * CFrame.new(0, 3, 0)}):Play()
+	DashAnim:Play()
+	local Waka = SoundsFolder.Waka:Clone()
+	Waka.Parent = BossHumanoidRootPart
+	Waka:Play()
+	game.Debris:AddItem(Waka, 0.5)
+	task.wait((PlayerPos + Vector3.new(0, 3, 0) - BossHumanoidRootPart.Position).Magnitude / 100)
+	DashAnim:Stop()
+	module.RockDebris(BossHumanoidRootPart.Position, 5)
+end 
+
+module.HighJump = function(Player, BossHumanoidRootPart, BossHumanoid)
+	local PlayerFound = table.find(AttackedPlayersArray, Player.Name)
+	if not PlayerFound then
+		table.insert(AttackedPlayersArray, PlayerIndexCount, Player.Name)
+		PlayerIndexCount += 1
+	end
+	local LoadDive = BossHumanoid:LoadAnimation(AnimationsFolder.Dive)
+	local LoadDiveLand = BossHumanoid:LoadAnimation(AnimationsFolder.DiveLand)
+	local LoadJumpOff = BossHumanoid:LoadAnimation(AnimationsFolder.Jumping)
+	LoadJumpOff:Play()
+	local JumpSwoosh = SoundsFolder.JumpingSwoosh:Clone()
+	JumpSwoosh.Parent = BossHumanoidRootPart
+	JumpSwoosh:Play()
+	game.Debris:AddItem(JumpSwoosh, JumpSwoosh.TimeLength)
+	task.wait(0.2)
+	LoadJumpOff:Stop()
+	LoadDive:Play()
+	local JumpToPos = BossHumanoidRootPart.CFrame * CFrame.new(0, 100, -10)
+	BossHumanoidRootPart.Anchored = true
+	TweenService:Create(BossHumanoidRootPart, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = JumpToPos}):Play()
+	task.wait(1)
+	local LandToPos = Player.HumanoidRootPart.CFrame * CFrame.new(0, 6.25, -5) * CFrame.Angles(0, math.rad(180), 0)
+	TweenService:Create(BossHumanoidRootPart, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = LandToPos}):Play()
+	local Waka = SoundsFolder.Waka:Clone()
+	Waka.Parent = BossHumanoidRootPart
+	Waka:Play()
+	game.Debris:AddItem(Waka, 0.7)
+	delay(0.3, function()
+		LoadDive:Stop()
+		LoadDiveLand:Play()
+	end)
+	delay(0.5, function()
+		module.RockDebris(BossHumanoidRootPart.Position, 15)
+		module.TakeDamage(40, 10, BossHumanoidRootPart)
+	end)
+	task.wait(1)
+	LoadDiveLand:Stop()
+	BossHumanoidRootPart.Anchored = false
+end 
+
+return module
