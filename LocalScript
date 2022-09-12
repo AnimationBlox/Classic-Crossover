@@ -1,0 +1,29 @@
+local RunService = game:GetService('RunService')
+
+local CameraManipulated = false
+local debounce = false
+
+RunService.RenderStepped:Connect(function()
+	if CameraManipulated then
+		workspace.CurrentCamera.CFrame = workspace.CheeseNPC.Camera.CFrame
+		wait(5)
+		CameraManipulated = false
+	end
+end)
+
+workspace.AnimPart.Touched:Connect(function(hit)
+	if game.Players.LocalPlayer == game.Players:GetPlayerFromCharacter(hit.Parent) then
+		if debounce == false then
+			debounce = true
+			CameraManipulated = true
+			workspace.LevelMusic:Stop()
+			wait(3)
+			workspace.BossMusic:Play()
+			wait(1.75)
+			workspace.CurrentCamera.CFrame = CFrame.new(hit.Parent.HumanoidRootPart.Position) * CFrame.new(0,0,60)
+			workspace.CheeseNPC:Destroy()
+			wait(295)
+			debounce = false
+		end
+	end
+end)
