@@ -1,0 +1,151 @@
+local Debris = game:GetService("Debris")
+local SimplePath = require(script.SimplePath)
+
+local Character = script.Parent
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+local AgentParameters = {	
+	Costs = {		
+		Water = 50,
+	}
+}
+local Path = SimplePath.new(Character, AgentParameters)
+Path.Visualize = false
+
+local DISTANCE = 30
+local SCAN_RADIUS_MIN = 10
+local SCAN_RADIUS_MAX = 30
+local AGRO_DISTANCE = 30
+local DELAY_MIN = 10
+local DELAY_MAX = 30
+
+local CurrentTarget = nil
+local LastPosition = nil
+local IsWandering = false
+
+function GetRandomOffset()
+	local ScanRadius = math.random(SCAN_RADIUS_MIN, SCAN_RADIUS_MAX)
+	return Vector3.new(ScanRadius * math.random(-1,1), 0, ScanRadius * math.random(-1,1))
+end
+
+function GetRandomPoint()
+	local Position = Vector3.new(HumanoidRootPart.Position.X, 300, HumanoidRootPart.Position.Z) + GetRandomOffset()
+	local Direction = CFrame.new(Position).UpVector * -500 
+
+	local Params = RaycastParams.new()
+	Params.IgnoreWater = false
+
+	local Result = workspace:Raycast(Position, Direction, Params)
+
+	if Result and Result.Instance and Result.Material ~= Enum.Material.Water then
+		return Result
+	end
+
+	return false
+end
+
+function GetNearestTarget()
+	local dist = AGRO_DISTANCE
+	local target = nil
+	local targetHum = nil
+
+	for i, p in pairs(game.Players:GetPlayers()) do
+		local TargetCharacter = p.Character
+
+		if TargetCharacter then
+			local TargetHumanoid = TargetCharacter:FindFirstChildOfClass("Humanoid")
+			local TargetHRP = TargetCharacter:FindFirstChild("HumanoidRootPart")
+
+			if TargetHumanoid and TargetHumanoid.Health > 0 and TargetHRP then
+				local d = (TargetHRP.Position - HumanoidRootPart.Position).Magnitude
+				if d <= dist then
+					dist = d
+					target = TargetHRP
+					targetHum = TargetHumanoid
+				end
+			end
+		end
+	end
+
+	return target, targetHum, dist
+end
+
+function StateChanged(oldState, newState)
+	if newState == Enum.HumanoidStateType.Seated then
+		local Seat = Humanoid.SeatPart
+		if Seat then
+			local SeatWeld = Seat:FindFirstChild("SeatWeld")
+			if SeatWeld then Debris:AddItem(SeatWeld, 0) end			
+		end
+		Humanoid.Sit = false
+		Humanoid.Jump = true
+	elseif newState == Enum.HumanoidStateType.Swimming then
+		Humanoid.Jump = true
+	end
+end
+
+Humanoid.StateChanged:Connect(StateChanged)
+
+local SameRequests = 0
+local LastRequest = nil
+
+function RunTo(goal, waitForStop)
+	if LastRequest == goal then		
+		if SameRequests >= 5 then
+			return false
+		else
+			SameRequests += 1
+		end		
+	else
+		LastRequest = goal
+		SameRequests = 0
+	end		
+
+	Path.Blocked:Connect(function()
+		Path:Run(goal)				
+	end)
+
+	Path:Run(goal)
+
+	if waitForStop then
+		repeat game["RunService"].Heartbeat:Wait() until Path._status == SimplePath.StatusType.Idle		
+	end
+
+	return true	
+end
+
+while Humanoid and Humanoid.Health > 0 do	
+	local NewTarget, TargetHumanoid, Distance = GetNearestTarget()	
+
+	if CurrentTarget ~= NewTarget then
+		if NewTarget == nil then
+			if Path._status ~= SimplePath.StatusType.Idle then Path:Stop() end					
+		end	
+		CurrentTarget = NewTarget
+		LastPosition = nil
+	end	
+
+	if CurrentTarget then	
+		if CurrentTarget.Position ~= LastPosition or Path._status == SimplePath.StatusType.Idle then
+			LastPosition = CurrentTarget.Position				
+			RunTo(LastPosition)
+		end			
+	elseif not IsWandering then		
+		IsWandering = true			
+
+		local RaycastResult	repeat RaycastResult = GetRandomPoint() task.wait() until RaycastResult
+		local Goal = RaycastResult.Position			
+
+		task.spawn(function()
+			RunTo(Goal, true)		
+			task.wait(math.random(DELAY_MIN, DELAY_MAX))
+			IsWandering = false
+		end)			
+	end
+
+	task.wait()
+end
+
+Path:Destroy()
+Debris:AddItem(Character, 0)
