@@ -1,0 +1,15 @@
+local humanoid = script.Parent:WaitForChild("Humanoid")
+humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+local DeathAnim = Hum:LoadAnimation(script.Animation)
+
+humanoid.HealthChanged:Connect(function()
+	if humanoid.Health <= 0 then
+		script.Parent.HumanoidRootPart.Anchored = true
+		DeathAnim:Play()
+		workspace.BossDeath:Play()
+		local Ending = game.ReplicatedStorage.KillPad:Clone()
+		Ending.Parent = game.Workspace
+		wait(3.5)
+		script.Parent:Destroy()
+	end
+end)
