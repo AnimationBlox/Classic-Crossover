@@ -1,0 +1,18 @@
+local folder = script.Parent
+local Start = folder:WaitForChild("Start")
+local End = folder:WaitForChild("End")
+local debounce = false
+
+function teleportPlayer(player, location)
+	local HumanoidRootPart = player:WaitForChild("HumanoidRootPart")
+	HumanoidRootPart.Position = Vector3.new(location.X, location.Y + 5, location.Z)
+end
+
+Start.Touched:Connect(function(hit)
+	if hit.Parent and debounce == false then
+		debounce = true
+		teleportPlayer(hit.Parent, End.Position)
+		wait(1)
+		debounce = false
+	end
+end)
