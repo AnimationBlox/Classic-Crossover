@@ -1,0 +1,199 @@
+local module = {}
+local AttackedPlayersArray = {}
+local PlayerIndexCount = 1
+local PathFindingService = game:GetService("PathfindingService")
+local TweenService = game:GetService("TweenService")
+local AnimationsFolder = script:WaitForChild("Animations")
+local SoundsFolder = script:WaitForChild("Sounds")
+local ServerStorage = game:GetService("ServerStorage")
+
+module.TakeDamage = function(Damage, Range, DamagePart)
+	for _, Player in pairs(game:GetService("Players"):GetChildren()) do
+		if (DamagePart.Position - Player.Character:FindFirstChild("HumanoidRootPart").Position).magnitude <= Range then
+			Player.Character:FindFirstChild("Humanoid"):TakeDamage(Damage)
+		end
+	end
+end
+
+module.WalkTo = function(StartPos, EndPos, Humanoid, WalkSpeed)
+	local OriginalSpeed = Humanoid.WalkSpeed
+	if WalkSpeed then
+		Humanoid.WalkSpeed = WalkSpeed
+	end
+	local Path = PathFindingService:CreatePath()
+	Path:ComputeAsync(StartPos, EndPos)
+	for _, Waypoint in pairs(Path:GetWaypoints()) do
+		Humanoid:MoveTo(Waypoint.Position)
+		Humanoid.MoveToFinished:Wait()
+	end
+	Humanoid.WalkSpeed = OriginalSpeed
+end
+
+module.RockDebris = function(MainPos, Count)
+	local RockDebrisFolder = Instance.new("Folder")
+	RockDebrisFolder.Name = "RockDebrisFolder"
+	RockDebrisFolder.Parent = workspace 
+	for Rock = 1, Count do
+		local RockObject = game:GetService("ServerStorage").RockDebris:Clone()
+		RockObject.Parent = RockDebrisFolder
+		RockObject.Position = MainPos + Vector3.new(math.random(-5, 5), math.random(0, 5), math.random(-5, 5))
+		RockObject.Orientation = Vector3.new(math.random(-5, 5), math.random(-5, 5), math.random(-5, 5))
+		game.Debris:AddItem(RockObject, math.random(5,10))
+	end
+end
+
+module.ShootBullet = function(Player, BossHumanoid, BossHumanoidRootPart)
+	local PlayerFound = table.find(AttackedPlayersArray, Player.Name)
+	if not PlayerFound then
+		table.insert(AttackedPlayersArray, PlayerIndexCount, Player.Name)
+		PlayerIndexCount += 1
+	end
+	local ShootAnim = BossHumanoid:LoadAnimation(AnimationsFolder.ShootBullet)
+	local CharacterBullet = BossHumanoid.Parent.Bullet
+	BossHumanoidRootPart.CFrame = CFrame.lookAt(BossHumanoidRootPart.Position, Player:FindFirstChild("HumanoidRootPart").Position)
+	ShootAnim:Play()
+	CharacterBullet.Transparency = 0
+	task.wait(0.2)
+	local ShootBullet = SoundsFolder.ShootBullet:Clone()
+	ShootBullet.Parent = BossHumanoidRootPart
+	ShootBullet:Play()
+	game.Debris:AddItem(ShootBullet, ShootBullet.TimeLength)
+	CharacterBullet.Transparency = 1
+	local BulletPosition = CharacterBullet.Position
+	local ClonedBullet = ServerStorage.Bullet:Clone()
+	ClonedBullet.Parent = workspace
+	ClonedBullet.Position = BulletPosition
+	ClonedBullet.Anchored = true
+	TweenService:Create(ClonedBullet, TweenInfo.new((Player:FindFirstChild("HumanoidRootPart").Position - BossHumanoidRootPart.Position).Magnitude / 100, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {Position = Player:FindFirstChild("HumanoidRootPart").Position - Vector3.new(0, 3 ,0)}):Play()
+	task.wait((Player:FindFirstChild("HumanoidRootPart").Position - BossHumanoidRootPart.Position).Magnitude / 100)
+	module.TakeDamage(15, 5, ClonedBullet)
+	ClonedBullet.Anchored = false
+	module.RockDebris(ClonedBullet.Position, 5)
+	game.Debris:AddItem(ClonedBullet, 0.25)
+	local ShouldFollow = math.random(1, 5)
+	if ShouldFollow == 1 then
+		BossHumanoidRootPart:SetNetworkOwner(nil)
+		module.WalkTo(BossHumanoidRootPart.Position, Player:FindFirstChild("HumanoidRootPart").Position, BossHumanoid)
+	end
+end
+
+module.HighJump = function(Player, BossHumanoidRootPart, BossHumanoid)
+	local PlayerFound = table.find(AttackedPlayersArray, Player.Name)
+	if not PlayerFound then
+		table.insert(AttackedPlayersArray, PlayerIndexCount, Player.Name)
+		PlayerIndexCount += 1
+	end
+	local LoadDive = BossHumanoid:LoadAnimation(AnimationsFolder.Dive)
+	local LoadDiveLand = BossHumanoid:LoadAnimation(AnimationsFolder.DiveLand)
+	local LoadJumpOff = BossHumanoid:LoadAnimation(AnimationsFolder.Jumping)
+	LoadJumpOff:Play()
+	local JumpSwoosh = SoundsFolder.JumpingSwoosh:Clone()
+	JumpSwoosh.Parent = BossHumanoidRootPart
+	JumpSwoosh:Play()
+	game.Debris:AddItem(JumpSwoosh, JumpSwoosh.TimeLength)
+	task.wait(0.2)
+	LoadJumpOff:Stop()
+	LoadDive:Play()
+	local JumpToPos = BossHumanoidRootPart.CFrame * CFrame.new(0, 100, -10)
+	BossHumanoidRootPart.Anchored = true
+	TweenService:Create(BossHumanoidRootPart, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = JumpToPos}):Play()
+	task.wait(1)
+	local LandToPos = Player.HumanoidRootPart.CFrame * CFrame.new(0, 6.25, -5) * CFrame.Angles(0, math.rad(180), 0)
+	TweenService:Create(BossHumanoidRootPart, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = LandToPos}):Play()
+	local GroundSmash = SoundsFolder.GroundSmash:Clone()
+	GroundSmash.Parent = BossHumanoidRootPart
+	delay(0.3, function()
+		LoadDive:Stop()
+		LoadDiveLand:Play()
+		GroundSmash:Play()
+	end)
+	delay(0.5, function()
+		module.RockDebris(BossHumanoidRootPart.Position, 15)
+		module.TakeDamage(40, 10, BossHumanoidRootPart)
+	end)
+	game.Debris:AddItem(GroundSmash, 5)
+	task.wait(1)
+	LoadDiveLand:Stop()
+	BossHumanoidRootPart.Anchored = false
+end 
+
+module.Cacti = function(Player, BossHumanoidRootPart, BossHumanoid)
+	local PlayerFound = table.find(AttackedPlayersArray, Player.Name)
+	if not PlayerFound then
+		table.insert(AttackedPlayersArray, PlayerIndexCount, Player.Name)
+		PlayerIndexCount += 1
+	end
+
+	local WarnPartFolder = Instance.new("Folder")
+	WarnPartFolder.Parent = workspace
+	WarnPartFolder.Name = "WarnPartFolder"
+
+	local CactiFolder = Instance.new("Folder")
+	CactiFolder.Parent = workspace
+	CactiFolder.Name = "CactiFolder"
+
+	delay(1, function()
+		local Sound = SoundsFolder.SpikesRise:Clone()
+		Sound.Parent = workspace
+		Sound:Play()
+		game.Debris:AddItem(Sound, Sound.TimeLength)
+	end)
+	for Spike = 1, 50 do
+		local WarnPart = Instance.new("Part")
+		WarnPart.Parent = WarnPartFolder
+		local RandomX = math.random(-50, 50)
+		local RandomZ = math.random(-50, 50)
+		local bakedVector =Vector3.new(RandomX, 0, RandomZ)
+		WarnPart.Position = BossHumanoidRootPart.Position - Vector3.new(0, 10.9, 0) + bakedVector
+		WarnPart.Shape = Enum.PartType.Cylinder
+		WarnPart.Orientation = Vector3.new(0, 0, 90)
+		WarnPart.Anchored = true
+		WarnPart.Size = Vector3.new(10,10,10)
+		WarnPart.Color = Color3.new(1, 0, 0)
+		WarnPart.Material = Enum.Material.Neon
+		WarnPart.Transparency = 0.7
+		WarnPart.CanCollide = false
+		local Time = math.random(30, 50)
+		delay (1, function()
+			local Cactus = ServerStorage.Cactus:Clone()
+			Cactus.Parent = CactiFolder
+			Cactus.Size = Vector3.new(0.98, 6, 3.429)
+			Cactus.Position = BossHumanoidRootPart.Position - Vector3.new(0, 12, 0) + bakedVector
+			TweenService:Create(Cactus, TweenInfo.new(
+				Time / 100,
+				Enum.EasingStyle.Back,
+				Enum.EasingDirection.Out),
+				{Position = Cactus.Position + Vector3.new(0, 7, 0)}):Play()
+			local DamagedPlayers = {}
+			local DamageCount = 1
+			Cactus.Touched:Connect(function(Hit)
+				if game:GetService("Players"):GetPlayerFromCharacter(Hit.Parent) then
+					local FoundPlayer = table.find(DamagedPlayers, game:GetService("Players"):GetPlayerFromCharacter(Hit.Parent).Name)
+					if not FoundPlayer then
+						local Player = game:GetService("Players"):GetPlayerFromCharacter(Hit.Parent)
+						table.insert(DamagedPlayers, DamageCount, Player.Name)
+						Player.Character.Humanoid:TakeDamage(20)
+						DamageCount += 1
+					end
+				end
+			end)
+			WarnPart:Destroy()
+			delay(Time / 100, function()
+				TweenService:Create(Cactus, TweenInfo.new(
+					Time / 100,
+					Enum.EasingStyle.Back,
+					Enum.EasingDirection.In),
+					{Position = Cactus.Position - Vector3.new(0, 10, 0)}):Play()
+				game.Debris:AddItem(Cactus, Time / 100)
+				WarnPartFolder:Destroy()
+				game.Debris:AddItem(CactiFolder, 0.5)
+			end)
+		end)
+	end
+	delay(1, function()
+		BossHumanoid:LoadAnimation(AnimationsFolder.BringSpikes):Play()
+	end)
+	task.wait(0.1)
+end
+
+return module
