@@ -1,0 +1,10 @@
+local Debounce = false
+
+script.Parent.Touched:Connect(function(hit)
+	if hit.Parent:FindFirstChild("Humanoid") and Debounce == false and hit.Parent.Name ~= "pretend theres like a name here" then
+		Debounce = true
+		hit.Parent.Humanoid:TakeDamage(5)
+		wait(1)
+	Debounce = false
+	end
+end)
