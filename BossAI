@@ -1,0 +1,118 @@
+task.wait(5)
+local RunService = game:GetService("RunService")
+local PathfindingService = game:GetService("PathfindingService")
+local Range = 200
+local BossHumanoid = script.Parent:WaitForChild("Humanoid")
+local BossHumanoidRootPart = script.Parent:WaitForChild("HumanoidRootPart")
+local PlayerInBossFightCount = 1
+local BossAttacks = require(script:WaitForChild("BossAttacks"))
+local currentBossPos = BossHumanoidRootPart.Position
+BossHumanoidRootPart:SetNetworkOwner(nil)
+
+local function CheckDistanceFromSpawn(Player)
+	local Character = Player.Character
+	local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+	local PosMag = (currentBossPos - HumanoidRootPart.Position).Magnitude
+	if PosMag <= Range then
+		local raycast = Ray.new(BossHumanoidRootPart.Position, (HumanoidRootPart.Position - BossHumanoidRootPart.Position).Unit * 5000)
+		local Part, Position, Normal = workspace:FindPartOnRay(raycast, script.Parent, false, true)
+		if Part.Parent == Character then
+			return true
+		end
+	end
+end
+
+local TableOfPlayers = {}
+
+RunService.Stepped:Connect(function()
+	for _, Player in pairs (game:GetService("Players"):GetChildren()) do
+		local Character = Player.Character
+		local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+		if HumanoidRootPart then
+			local PosMag = (BossHumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+			if PosMag <= Range then
+				if not table.find(TableOfPlayers, Player.Name) then
+					table.insert(TableOfPlayers, Player.Name)
+					PlayerInBossFightCount += 1
+				end
+			else
+				if table.find(TableOfPlayers, Player.Name) then
+					local FoundIndex = table.find(TableOfPlayers, Player.Name)
+					table.remove(TableOfPlayers, FoundIndex)
+				end
+			end
+		end
+	end
+end)
+
+for _, Part in pairs(script.Parent:GetChildren()) do
+	if Part:IsA("BasePart") or Part:IsA("MeshPart") then
+		if Part.Name ~= "HumanoidRootPart" then
+			Part.CanCollide = false
+		end
+	end
+end
+
+while task.wait(0.1) do
+	if #TableOfPlayers >= 1 then
+		local RandomTablePlayer = math.random(1, #TableOfPlayers)
+		local FoundPlayer
+		local s, e = pcall(function()
+			FoundPlayer = game:GetService("Players"):FindFirstChild(TableOfPlayers[math.random(1, #TableOfPlayers)])
+		end)
+		if FoundPlayer ~= nil then
+			local Player = FoundPlayer
+			local DistanceResult = CheckDistanceFromSpawn(Player)
+			if DistanceResult == true then
+				local AttackCount = 0
+				if AttackCount >= 5 then
+					BossAttacks.BossTired(BossHumanoid)
+					AttackCount = 0
+				else
+					if Player.Character.Humanoid.Health <= 0 then 
+						BossAttacks.WalkTo(BossHumanoidRootPart.Position, currentBossPos, BossHumanoid)
+					else
+						if script.Parent.Humanoid.Health >= 1 then
+							AttackCount += 1
+							local ReturnedMatchState
+							local randomAttack = math.random(1, 10)
+							if randomAttack == 1 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.5)
+							elseif randomAttack == 2 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.5)
+							elseif randomAttack == 3 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.5)
+							elseif randomAttack == 4 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.5)
+							elseif randomAttack == 5 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.55)
+							elseif randomAttack == 6 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.55)
+							elseif randomAttack == 7 then
+								ReturnedMatchState = BossAttacks.Dash(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(0.55)
+							elseif randomAttack == 8 then
+								ReturnedMatchState = BossAttacks.HighJump(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(1)
+							elseif randomAttack == 9 then
+								ReturnedMatchState = BossAttacks.HighJump(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(1)
+							elseif randomAttack == 10 then
+								ReturnedMatchState = BossAttacks.HighJump(Player.Character, BossHumanoidRootPart, BossHumanoid)
+								task.wait(1)
+							end
+						end
+					end
+				end
+			end
+		else
+			BossAttacks.WalkTo(BossHumanoidRootPart.Position, currentBossPos, BossHumanoid)
+		end
+	end
+end
