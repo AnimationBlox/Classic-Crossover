@@ -1,0 +1,20 @@
+local Part = script.Parent
+local NPC = workspace.CheeseNPC
+local Animation = script.Animation
+local Debounce = false
+
+Part.Touched:Connect(function(Hit)
+	local Player = game:GetService("Players"):GetPlayerFromCharacter(Hit.Parent)
+
+	if Player and Debounce == false then
+		Debounce = true
+		local Anim = NPC.Humanoid:LoadAnimation(Animation)
+		Player.Character.Humanoid.WalkSpeed = 0
+		Anim:Play()
+		wait(5)
+		Anim:Stop()
+		Player.Character.Humanoid.WalkSpeed = 25
+		wait(61)
+		script.Parent:Destroy()
+	end
+end)
