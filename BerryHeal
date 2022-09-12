@@ -1,0 +1,19 @@
+local debounce = 30
+local Active = true
+
+function onTouch(hit)
+	if (Active == false) then return end
+	local human = hit.Parent:findFirstChild("Humanoid")
+	if (human ~= nil) then
+		human.Health = human.MaxHealth
+		workspace.Heal:Play()
+		script.Parent.Berries.Transparency = 1
+		Active = false
+		human.Parent.Torso.Stars:Emit(25)
+		wait(debounce)
+		script.Parent.Berries.Transparency = 0
+		Active = true
+	end
+end
+
+script.Parent.HealPart.Touched:connect(onTouch)
