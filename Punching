@@ -1,0 +1,99 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Punch = ReplicatedStorage:WaitForChild("Punch")
+
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+
+local Anims = script:WaitForChild("Animations")
+local Meshes = script:WaitForChild("Meshes")
+
+local SSS = game:GetService("ServerScriptService")
+
+local Damage = 5
+
+local plrsHit = {}
+
+local CombatMoment = 
+{
+		["L"] = Anims.Com1,
+}
+
+function doDamage(Character, humrp, Folder)
+	local Hitbox = Meshes:WaitForChild("Hitbox"):Clone()
+	Hitbox.CFrame = humrp.CFrame * CFrame.new (0,0,-18)
+	Hitbox.Parent = Folder
+	
+	local weld = Instance.new("ManualWeld")
+	weld.Part0 = Hitbox
+	weld.Part1 = humrp
+	weld.C0 = weld.Part0.CFrame:ToObjectSpace(weld.Part1.CFrame)
+	weld.Parent = weld.Part0
+	
+	Hitbox.Touched:Connect(function(Hit)
+		if Hit:IsA("BasePart") then
+			if not Hit:IsDescendantOf(Character) then
+				local enemyHum = Hit.Parent:FindFirstChild("Humanoid")
+				local enemyHumRP = Hit.Parent:FindFirstChild("HumanoidRootPart")
+				
+				if enemyHum and enemyHumRP then
+					Hitbox:Destroy()
+					
+					enemyHum:TakeDamage(Damage)
+					
+					if not plrsHit[enemyHum] then
+						
+						plrsHit[enemyHum] = 30
+						
+						enemyHum.WalkSpeed = 8
+						enemyHum.JumpPower = 0
+						
+						while wait(0.1) do
+							if plrsHit[enemyHum] > 0 then
+								plrsHit[enemyHum] -= 1
+							else
+								plrsHit[enemyHum] = nil
+								
+								enemyHum.WalkSpeed = 16
+								enemyHum.JumpPower = 50
+								break
+							end
+						end
+					elseif plrsHit[enemyHum] then
+						plrsHit[enemyHum] = 30
+						
+						enemyHum.WalkSpeed = 8
+						enemyHum.JumpPower = 0
+					end
+				end
+			end
+		end
+	end)
+	
+end
+
+Punch.OnServerEvent:Connect(function(Player, screamAttack)
+	local Character = Player.Character
+	local Humanoid = Character.Humanoid
+	local HumanoidRP = Character.HumanoidRootPart
+	
+	if Humanoid then
+		local Action
+		Action = Humanoid:LoadAnimation(CombatMoment[screamAttack])
+		Action:Play(0)
+		workspace.Roar:Play()
+		HumanoidRP.Attachment.Scream:Emit(10)
+		wait(0.255)
+		local Folder = Instance.new("Folder", workspace)
+		Folder.Name = "Effects"
+		Debris:AddItem(Folder, .5)
+
+		doDamage(Character, HumanoidRP, Folder)
+
+		Action.Stopped:Connect(function()
+			wait(.1)
+			Punch:FireClient(Player, true)
+		end)
+	else
+		Punch:FireClient(Player, false)
+	end
+end)
