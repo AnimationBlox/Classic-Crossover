@@ -1,0 +1,35 @@
+ocal Player = game:GetService("Players").LocalPlayer
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Punch = ReplicatedStorage:WaitForChild("Punch")
+
+local UIS = game:GetService("UserInputService")
+
+local debounce = false
+
+local screamAttack = false
+
+local currTime = 0
+local prevTime = 0
+
+UIS.InputBegan:Connect(function(input, isTyping)
+	if isTyping then
+		return
+	elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if debounce == false then
+			debounce = true
+				screamAttack = "L"
+			Punch:FireServer(screamAttack)
+		end
+	end
+end)
+
+Punch.OnClientEvent:Connect(function(canPunch)
+	if canPunch then
+		wait(0.5)
+		debounce = false
+	else
+		wait(0.5)
+		debounce = false
+	end
+end)
