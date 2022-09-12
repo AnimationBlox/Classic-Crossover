@@ -149,3 +149,4 @@ end
 
 Path:Destroy()
 Debris:AddItem(Character, 0)
+ 
