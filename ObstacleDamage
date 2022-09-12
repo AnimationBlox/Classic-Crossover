@@ -1,0 +1,10 @@
+local Debounce = false
+
+script.Parent.Touched:Connect(function(hit)
+	if hit.Parent:FindFirstChild("Humanoid") and Debounce == false then
+		Debounce = true
+		hit.Parent.Humanoid:TakeDamage(10)
+		wait(1)
+		Debounce = false
+	end
+end)
