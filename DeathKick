@@ -1,0 +1,7 @@
+game.Players.PlayerAdded:Connect(function(Player)
+	Player.CharacterAdded:Connect(function(Character)
+		Character.Humanoid.Died:Connect(function(Death)
+			Player:Kick("Game Over!")
+		end)
+	end)
+end)
