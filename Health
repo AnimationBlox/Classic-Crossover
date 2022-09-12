@@ -1,0 +1,12 @@
+local sound = workspace.HitSound
+local character = script.Parent
+
+local humanoid = character:WaitForChild("Humanoid")
+local previousHealth = humanoid.Health
+
+humanoid.HealthChanged:Connect(function(health)
+	if health < previousHealth then
+		sound:Play()
+	end
+	previousHealth = health
+end)
