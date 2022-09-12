@@ -1,0 +1,38 @@
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+Camera2D = true
+
+player.CharacterAdded:Wait()
+player.Character:WaitForChild("HumanoidRootPart")
+
+camera.CameraSubject = player.Character.HumanoidRootPart
+camera.CameraType = Enum.CameraType.Attach
+camera.FieldOfView = 30
+
+local RunService = game:GetService("RunService")
+
+local function onUpdate()
+	local character = player.Character
+	if character and Camera2D == true then
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local rootPosition = root.Position + Vector3.new(0, 2, 0)
+			local cameraPosition = rootPosition + Vector3.new(-1, 90, 0)
+			camera.CFrame = CFrame.lookAt(cameraPosition, rootPosition)
+		end
+	elseif camera.CameraSubject ~= player.Character.Humanoid then
+		camera.CameraSubject = player.Character.Humanoid
+		camera.CameraType = Enum.CameraType.Custom
+		camera.FieldOfView = 75
+	end
+end
+
+workspace.CameraTo3D.Touched:Connect(function(hit)
+	if game.Players.LocalPlayer == game.Players:GetPlayerFromCharacter(hit.Parent) then
+		Camera2D = false
+		wait(0.25)
+		workspace.CameraTo3D:Destroy()
+	end
+end)
+
+RunService:BindToRenderStep("Camera", Enum.RenderPriority.Camera.Value, onUpdate)
